@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -9,7 +10,7 @@ import (
 	"github.com/Golukpal/cmd/db"
 	"github.com/Golukpal/cmd/helpers"
 	"github.com/Golukpal/cmd/models"
-	"github.com/Golukpal/jwt/cmd/models"
+	_ "github.com/Golukpal/jwt/cmd/models"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -17,7 +18,7 @@ import (
 )
 
 var userCollection *mongo.Collection = db.OpenCollection(db.Client, "user")
-var validates = validator.New()
+var validate = validator.New()
 
 func HashPassword()
 
@@ -47,13 +48,34 @@ func Signup()gin.HandlerFunc{
 			return 
 		}
 
-		count, err := userCollection.CountDocuments(ctx, bson.M{"phone": user.Phone})
-		defer cancel()
-		if err!= nil{
-			log.Panic(err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error":"error occured while checking for phone"})
-			return 
+		// count, err := userCollection.CountDocuments(ctx, bson.M{"phone": user.Phone})
+		// defer cancel()
+		// if err!= nil{
+		// 	log.Panic(err)
+		// 	c.JSON(http.StatusInternalServerError, gin.H{"error":"error occured while checking for phone"})
+		// 	return 
+		// }
+
+		if count > 0 {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "this email and phone already exist"})
 		}
+
+		user.Created_at,_ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+		user.Updated_at,_ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+		user.ID = premitive.NewObjectID()
+		user.User_id = user.ID.Hex()
+		token, refreshToken,_ := helpers.GenrateAllTokens(*user.Email, *user.First_name, *user.Last_name, *user.User_type, *user.User_id)
+		user.Token = &token
+		user.Refresh_token = &refreshToken
+
+		resultInsertionNumber, insertErr := userCollection.InsertOne(ctx, user)
+		if insertErr!= nil{
+			msg:= fmt.Sprintf("user item was not created")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			return
+		}
+		defer cancel()
+		c.JSON(http.StatusOK, resultInsertionNumber)
 
 		}
 }
