@@ -2,12 +2,16 @@ package helpers
 
 import (
 	"context"
+	"error"
+	"fmt"
+	"log"
+	"net/http"
 	"os"
 	"time"
-	"fmt"
-	"github.com/golang-jwt/jwt/v4"
+
 	"github.com/Golukpal/cmd/db"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v4"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -23,7 +27,7 @@ type SignedDetails struct {
 	jwt.standardClaims 
 }
 
-var useCollection *mongo.Collection = database.OpenCollection(database.Client, "user")
+var useCollection *mongo.Collection = db.OpenCollection(db.Client, "user")
  
 var SECRET_KEY string = os.Getenv("SECRET_KEY")
 
@@ -46,7 +50,8 @@ func GenerateAllTokens(email string, firstName string, lastName string, uid stri
 	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(SECRET_KEY))
 	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString([]byte(SECRET_KEY))
 	if err != nil {
-		return "", "", err
+		log.Panic(err)
+		return
 	}	
 	return token, refreshToken, err
 		}
