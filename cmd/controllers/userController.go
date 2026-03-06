@@ -23,9 +23,9 @@ import (
 var userCollection *mongo.Collection = db.OpenCollection(db.Client, "user")
 var validate = validator.New()
 
-func HashPassword()
+func HashPassword( )
 
-func VarifyPassword(userPassword string, provudedPassword string) (bool, string){
+func VarifyPassword(userPassword string, providedPassword string) (bool, string){
 	err := bcrypt.CompareHashAndPassword([]byte(providedPassword), []byte(userPassword))
 	check := true 
 	msg := ""
