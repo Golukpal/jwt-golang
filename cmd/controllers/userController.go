@@ -10,12 +10,14 @@ import (
 	"github.com/Golukpal/cmd/db"
 	"github.com/Golukpal/cmd/helpers"
 	"github.com/Golukpal/cmd/models"
+	"github.com/Golukpal/jwt/cmd/helpers"
 	"github.com/Golukpal/jwt/cmd/models"
 	_ "github.com/Golukpal/jwt/cmd/models"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var userCollection *mongo.Collection = db.OpenCollection(db.Client, "user")
@@ -23,7 +25,16 @@ var validate = validator.New()
 
 func HashPassword()
 
-func varifyPassword(userPassword string, provudedPassword string) (bool, string){
+func VarifyPassword(userPassword string, provudedPassword string) (bool, string){
+	err := bcrypt.CompareHashAndPassword([]byte(providedPassword), []byte(userPassword))
+	check := true 
+	msg := ""
+
+	if err!= nil{
+		msg = fmt.Sprintf("email and password is incorrect")
+		check = false 
+	}
+	return check, msg
 	  
 }
 
@@ -101,6 +112,26 @@ func Login() gin.HandlerFunc {
 		}
 		passwordIsValid, msg := VarifyPassword(*user.Passwaord, *&foundUser.Password)
 		defer cancel()
+		if passwordIsValid!= true{
+			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			return 
+		}
+
+		if foundUser.Email == nil{
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
+
+		}
+		token, refreshToken, _ := helpers.GenerateAllTokens(*foundUser.Emial, *&foundUser.First_name, *foundUser.Last_name, *foundUser.User_id, *foundUser.User_type)
+		helpers.UpdateAllTokens(token, refreshToken, foundUser.User_id)
+		err := userCollection.FindOne(ctx, bson.M{"user_id": foundUser.User_id}).Decode(&foundUser)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "something went wrong"})
+			return
+		}
+		c.JSON(http.StatusOK, foundUser)
+
+
+
 
 	}
 }
